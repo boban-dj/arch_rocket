@@ -1,0 +1,104 @@
+#!/bin/bash
+
+ln -s /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
+
+echo -e "arch_xw6400" > /etc/hostname
+echo -e "KEYMAP=us\n" > /etc/vconsole.conf
+echo -e "LANG=en_US.UTF-8\nLC_COLLATE=C\n" > /etc/locale.conf
+echo -e "en_US.UTF-8 UTF-8\n" > /etc/locale.gen
+echo -e "Europe/Amsterdam\n" > /etc/timezone
+
+# Systemd
+# Create a couple of ttys that I find can be useful, X will be on tty4
+# Due to the way systemd is working here I have noticed the X display is coming up on tty1 !!!!!!!!!
+ln -sf /usr/lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@tty2.service
+ln -sf /usr/lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@tty3.service
+
+locale-gen
+
+mkinitcpio -p linux
+
+mkdir /media
+
+# I have occasionally received a "Missing Operating System" message on reboot.
+# Because of this I added the command 'extlinux -i /boot/syslinux'
+# This solved the problem initially but I still very occasionally get the message.
+# Each time it has happend I reboot the live CD, remount the partitions and
+# run the extlinux -i /boot/syslinux command again and it solves the problem.
+# Not sure of the reason for this but I have added a couple of sleep commands to
+# see if it helps at all.
+/usr/sbin/syslinux-install_update -iam
+sleep 1
+extlinux -i /boot/syslinux
+sleep 1
+passwd root
+
+# Uncomment the multilib repo if it exists (x86_64 only but harmless in i686)
+sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
+sed -i '/#\[multilib\]/,/#Include = \/etc\/pacman.d\/mirrorlist/ s/#//' /etc/pacman.conf
+sed -i 's/#\[multilib\]/\[multilib\]/g' /etc/pacman.conf
+
+cat > /boot/syslinux/syslinux.cfg << "EOFF"
+# Config file for Syslinux -
+# /boot/syslinux/syslinux.cfg
+DEFAULT arch
+PROMPT 0        # Set to 1 if you always want to display the boot: prompt
+TIMEOUT 10
+
+# Menu Configuration
+# Either menu.c32 or vesamenu32.c32 must be copied to /boot/syslinux
+UI menu.c32
+#UI vesamenu.c32
+
+# Refer to http://syslinux.zytor.com/wiki/index.php/Doc/menu
+MENU TITLE Arch Linux
+#MENU BACKGROUND splash.png
+MENU COLOR border       30;44   #40ffffff #a0000000 std
+MENU COLOR title        1;36;44 #9033ccff #a0000000 std
+MENU COLOR sel          7;37;40 #e0ffffff #20ffffff all
+MENU COLOR unsel        37;44   #50ffffff #a0000000 std
+MENU COLOR help         37;40   #c0ffffff #a0000000 std
+MENU COLOR timeout_msg  37;40   #80ffffff #00000000 std
+MENU COLOR timeout      1;37;40 #c0ffffff #00000000 std
+MENU COLOR msg07        37;40   #90ffffff #a0000000 std
+MENU COLOR tabmsg       31;40   #30ffffff #00000000 std
+
+# boot sections follow
+# TIP: If you want a 1024x768 framebuffer, add "vga=773" to your kernel line.
+
+LABEL arch
+	MENU LABEL Arch Linux on /dev/sda3
+	LINUX ../vmlinuz-linux
+	APPEND root=/dev/sda3 ipv6.disable=1 ro
+	INITRD ../initramfs-linux.img
+
+LABEL archfallback
+	MENU LABEL Arch Linux Fallback on /dev/sda3
+	LINUX ../vmlinuz-linux
+	APPEND root=/dev/sda3 ro
+	INITRD ../initramfs-linux-fallback.img
+
+#LABEL windows
+#        MENU LABEL Windows
+#        COM32 chain.c32
+#        APPEND hd0 1
+
+LABEL hdt
+        MENU LABEL HDT (Hardware Detection Tool)
+        COM32 hdt.c32
+
+LABEL reboot
+        MENU LABEL Reboot
+        COM32 reboot.c32
+
+LABEL off
+        MENU LABEL Power Off
+        COMBOOT poweroff.com
+EOFF
+
+echo
+echo
+echo
+echo -e "Do... \e[00;31mextlinux -i /boot/syslinux\e[00m and press <Enter>"
+echo
+echo -e "Now type \e[00;31mexit\e[00m and press\e[00;31m <Enter>\e[00m."
