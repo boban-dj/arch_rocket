@@ -629,6 +629,7 @@ shot ()
 # clock
 # netinfo
 # shot ($HOME/Pictures/Screenshot)
+# shot2 with maim and slop
 # bu
 # extract_simple
 # stock
@@ -713,6 +714,12 @@ shot ()
 {
 import -frame -strip -quality 75 "$HOME/Pictures/Screenshot/$(date +%s).png"
 }
+
+
+## Shot2 with maim and slop
+#<https://github.com/naelstrof/maim>
+alias shot2='maim -s -c 1,0,0,0.6 -p 10 ~/Pictures/Screenshot/$(date +%F-%T).png'
+
 
 ################################################################################
 ## BU - BACK UP A FILE. USAGE "BU FILENAME.TXT"
